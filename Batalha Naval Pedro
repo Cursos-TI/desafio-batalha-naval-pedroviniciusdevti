@@ -1,0 +1,251 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+/*
+  Projeto: Batalha Naval – Três Níveis de Complexidade
+  Linguagem: C (uso de printf, vetores e matrizes)
+
+  Como usar (exemplos com GCC):
+    Compilar:   gcc -O2 -Wall -Wextra -o batalha batalha_naval.c
+    Executar:   ./batalha
+
+  Estrutura do arquivo:
+    - Nível Novato    -> posiciona 2 navios (um vertical e um horizontal) e imprime coordenadas.
+    - Nível Aventureiro-> tabuleiro 10x10, posiciona 4 navios (inclui diagonais), imprime a matriz (0=livre, 3=ocupado).
+    - Nível Mestre     -> gera máscaras de habilidades (cone, cruz, octaedro/losango) com 0 e 1, usando loops aninhados.
+
+  Observação:
+    Entradas são feitas via variáveis no código, conforme requisitos.
+*/
+
+/* ========================= Utilidades ========================= */
+#define BOARD_N 10
+
+void print_div(const char *title) {
+    printf("\n================ %s ================\n", title);
+}
+
+/* ========================= Nível Novato ========================= */
+
+typedef struct { int x, y; } Ponto; // (linha, coluna) – 0-based
+
+typedef struct {
+    Ponto partes[8]; // tamanho máximo para exemplo simples
+    int tamanho;
+    char orientacao; // 'H' ou 'V'
+} Navio;
+
+// Preenche um navio horizontal
+void navio_horizontal(Navio *n, int linha, int col_inicio, int tamanho) {
+    n->tamanho = tamanho;
+    n->orientacao = 'H';
+    for (int i = 0; i < tamanho; i++) {
+        n->partes[i].x = linha;
+        n->partes[i].y = col_inicio + i;
+    }
+}
+
+// Preenche um navio vertical
+void navio_vertical(Navio *n, int col, int lin_inicio, int tamanho) {
+    n->tamanho = tamanho;
+    n->orientacao = 'V';
+    for (int i = 0; i < tamanho; i++) {
+        n->partes[i].x = lin_inicio + i;
+        n->partes[i].y = col;
+    }
+}
+
+void imprimir_coordenadas_navio(const Navio *n, const char *nome) {
+    printf("%s (%c):\n", nome, n->orientacao);
+    for (int i = 0; i < n->tamanho; i++) {
+        printf("Parte %d -> (x=%d, y=%d)\n", i, n->partes[i].x, n->partes[i].y);
+    }
+}
+
+void nivel_novato_demo(void) {
+    print_div("Nível Novato – Coordenadas de 2 navios");
+
+    // Entradas por variáveis (editáveis):
+    int tamanho_h = 4; // navio horizontal de tamanho 4
+    int tamanho_v = 3; // navio vertical de tamanho 3
+
+    Navio h, v;
+    navio_horizontal(&h, /*linha*/ 2, /*col_inicio*/ 1, tamanho_h);
+    navio_vertical(&v,   /*col*/ 6,   /*lin_inicio*/ 4, tamanho_v);
+
+    imprimir_coordenadas_navio(&h, "Navio Horizontal");
+    imprimir_coordenadas_navio(&v, "Navio Vertical");
+}
+
+/* ========================= Nível Aventureiro ========================= */
+
+// 0 = livre, 3 = ocupado
+void init_board(int m[BOARD_N][BOARD_N]) {
+    for (int i = 0; i < BOARD_N; i++)
+        for (int j = 0; j < BOARD_N; j++)
+            m[i][j] = 0;
+}
+
+void print_board(const int m[BOARD_N][BOARD_N]) {
+    for (int i = 0; i < BOARD_N; i++) {
+        for (int j = 0; j < BOARD_N; j++) {
+            printf("%d ", m[i][j]);
+        }
+        printf("\n");
+    }
+}
+
+// Marca navio horizontal dentro dos limites
+void place_horizontal(int m[BOARD_N][BOARD_N], int linha, int col_inicio, int tamanho) {
+    for (int j = 0; j < tamanho; j++) {
+        int c = col_inicio + j;
+        if (linha >= 0 && linha < BOARD_N && c >= 0 && c < BOARD_N)
+            m[linha][c] = 3;
+    }
+}
+
+// Marca navio vertical dentro dos limites
+void place_vertical(int m[BOARD_N][BOARD_N], int col, int lin_inicio, int tamanho) {
+    for (int i = 0; i < tamanho; i++) {
+        int r = lin_inicio + i;
+        if (r >= 0 && r < BOARD_N && col >= 0 && col < BOARD_N)
+            m[r][col] = 3;
+    }
+}
+
+// Marca navio diagonal principal (↘) dentro dos limites
+void place_diag_principal(int m[BOARD_N][BOARD_N], int lin_inicio, int col_inicio, int tamanho) {
+    for (int k = 0; k < tamanho; k++) {
+        int r = lin_inicio + k;
+        int c = col_inicio + k;
+        if (r >= 0 && r < BOARD_N && c >= 0 && c < BOARD_N)
+            m[r][c] = 3;
+    }
+}
+
+// Marca navio diagonal secundária (↗) dentro dos limites
+void place_diag_secundaria(int m[BOARD_N][BOARD_N], int lin_inicio, int col_inicio, int tamanho) {
+    for (int k = 0; k < tamanho; k++) {
+        int r = lin_inicio - k;
+        int c = col_inicio + k;
+        if (r >= 0 && r < BOARD_N && c >= 0 && c < BOARD_N)
+            m[r][c] = 3;
+    }
+}
+
+void nivel_aventureiro_demo(void) {
+    print_div("Nível Aventureiro – Tabuleiro 10x10 com 4 navios (inclui diagonais)");
+
+    int board[BOARD_N][BOARD_N];
+    init_board(board);
+
+    // Entradas por variáveis (editáveis):
+    // Quatro navios: H, V, Diag↘, Diag↗
+    place_horizontal(board, /*linha*/ 1, /*col_inicio*/ 2, /*tam*/ 5);
+    place_vertical  (board, /*col*/   7, /*lin_ini*/    0, /*tam*/ 4);
+    place_diag_principal(board, /*lin_ini*/ 3, /*col_ini*/ 1, /*tam*/ 5);
+    place_diag_secundaria(board, /*lin_ini*/ 8, /*col_ini*/ 2, /*tam*/ 4);
+
+    print_board(board);
+}
+
+/* ========================= Nível Mestre ========================= */
+
+// Máscaras de habilidades (0/1) impressas com printf("%d ")
+// Tamanhos pequenos (ex.: 5x5) para replicar os exemplos do enunciado.
+
+void print_mask(int n, int m[n][n]) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            printf("%d ", m[i][j]);
+        }
+        printf("\n\n"); // linha em branco entre linhas, como no exemplo fornecido
+    }
+}
+
+// Cruz (mais simples): 1 quando i == centro ou j == centro, limitado a um raio
+void habilidade_cruz(int n, int raio, int out[n][n]) {
+    int centro = n / 2; // assume n ímpar
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            int cond_linha = (i == centro && abs(j - centro) <= raio);
+            int cond_col   = (j == centro && abs(i - centro) <= raio);
+            out[i][j] = (cond_linha || cond_col) ? 1 : 0;
+        }
+    }
+}
+
+// Octaedro (losango em 2D): 1 quando |i-centro| + |j-centro| <= raio
+void habilidade_octaedro(int n, int raio, int out[n][n]) {
+    int centro = n / 2; // assume n ímpar
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            int manhattan = abs(i - centro) + abs(j - centro);
+            out[i][j] = (manhattan <= raio) ? 1 : 0;
+        }
+    }
+}
+
+// Cone (triângulo isósceles "apontando para baixo"): linhas crescem de cima para baixo
+// Para reproduzir o exemplo:
+// n = 3 linhas, largura = 5 colunas (usaremos uma grade quadrada 5x5 imprimindo apenas 3 linhas com 1s centrais)
+// Implementação genérica: com n ímpar, definimos altura = (n+1)/2 e incrementamos a largura a cada linha.
+void habilidade_cone_baixo(int n, int out[n][n]) {
+    // zera
+    for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) out[i][j] = 0;
+
+    int centro = n / 2; // coluna central
+    int altura = (n + 1) / 2; // número de linhas "ativas" do cone a partir do topo
+
+    for (int linha = 0; linha < altura; linha++) {
+        int semi_largura = linha; // cresce 0,1,2,...
+        for (int j = centro - semi_largura; j <= centro + semi_largura; j++) {
+            if (j >= 0 && j < n) out[linha][j] = 1;
+        }
+    }
+}
+
+void nivel_mestre_demo(void) {
+    print_div("Nível Mestre – Habilidades (cone, cruz, octaedro)");
+
+    // Vamos usar n=5 para cruz e octaedro (como nos exemplos de 5 colunas)
+    // e também n=5 para o cone, que imprimirá as 3 primeiras linhas como no enunciado.
+
+    int n = 5;
+    int mask[5][5];
+
+    // Cone
+    habilidade_cone_baixo(n, mask);
+    printf("Habilidade: Cone (exemplo semelhante ao enunciado)\n");
+    // Para deixar semelhante ao exemplo (3 linhas exibidas), vamos mostrar somente as 3 primeiras linhas
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < n; j++) printf("%d ", mask[i][j]);
+        printf("\n\n");
+    }
+
+    // Octaedro (losango) com raio=1 (reproduz 3 linhas do exemplo)
+    int mask_octa[5][5];
+    habilidade_octaedro(n, /*raio*/ 1, mask_octa);
+    printf("Habilidade: Octaedro (losango)\n");
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < n; j++) printf("%d ", mask_octa[i+1][j]); // centraliza 3 linhas ao meio
+        printf("\n\n");
+    }
+
+    // Cruz com raio=2 (preenche linha e coluna centrais completas)
+    int mask_cruz[5][5];
+    habilidade_cruz(n, /*raio*/ 2, mask_cruz);
+    printf("Habilidade: Cruz\n");
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < n; j++) printf("%d ", mask_cruz[i+1][j]); // centraliza 3 linhas ao meio
+        printf("\n\n");
+    }
+}
+
+int main(void) {
+    nivel_novato_demo();
+    nivel_aventureiro_demo();
+    nivel_mestre_demo();
+    return 0;
+}
